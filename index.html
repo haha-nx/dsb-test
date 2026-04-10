@@ -69,7 +69,19 @@
             text-align: left;
         }
 
-        .opt-btn:hover { border-color: var(--primary); background: #fafdff; }
+        @media (hover: hover) {
+            .opt-btn:hover {
+                border-color: var(--primary);
+                background: #fafdff;
+                transform: translateY(-2px);
+            }
+        }
+        
+        /* 增加一个点击时的即时反馈，手指松开就消失 */
+        .opt-btn:active {
+            background-color: #f0f0f0;
+            transform: scale(0.98);
+        }
 
         #result-screen { display: none; text-align: center; }
         .type-tag { font-size: 2rem; font-weight: bold; color: var(--accent); margin: 15px 0; }
