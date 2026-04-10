@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSB 深度人格鉴定局</title>
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --secondary: #a29bfe;
+            --accent: #ff7675;
+            --bg: #f9f9fb;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        #app {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+            margin-top: 5vh;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #eee;
+            border-radius: 3px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        #inner-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            width: 0%;
+            transition: 0.4s;
+        }
+
+        .question-area { display: none; }
+        .question-area.active { display: block; animation: slideIn 0.3s ease-out; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        h1 { color: var(--primary); font-size: 1.8rem; text-align: center; }
+        .q-text { font-size: 1.2rem; line-height: 1.5; margin-bottom: 25px; color: #2d3436; min-height: 60px; }
+
+        .btn-group { display: grid; gap: 12px; }
+        .opt-btn {
+            padding: 15px;
+            border: 2px solid #f0f0f0;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .opt-btn:hover { border-color: var(--primary); background: #fafdff; }
+
+        #result-screen { display: none; text-align: center; }
+        .type-tag { font-size: 2rem; font-weight: bold; color: var(--accent); margin: 15px 0; }
+        .desc-box { background: #fff5f5; padding: 20px; border-radius: 15px; color: #636e72; line-height: 1.7; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="welcome-screen">
+        <h1>🧪 DSB 人格测试</h1>
+        <p style="color: #636e72; text-align: center;">基于行为逻辑与潜意识的 30 题深度映射</p>
+        <div style="height: 40px;"></div>
+        <button class="opt-btn" style="width: 100%; text-align: center; background: var(--primary); color: white;" onclick="initQuiz()">进入测评</button>
+    </div>
+
+    <div id="quiz-screen" style="display: none;">
+        <div class="progress-bar"><div id="inner-bar"></div></div>
+        <p id="q-counter" style="font-size: 0.8rem; color: #b2bec3;">QUESTION 1/30</p>
+        <div id="q-container" class="question-area active">
+            <div class="q-text" id="q-text">题目加载中...</div>
+            <div class="btn-group">
+                <button class="opt-btn" onclick="handleSelect(2)">确实，这就是我</button>
+                <button class="opt-btn" onclick="handleSelect(1)">偶尔会这样</button>
+                <button class="opt-btn" onclick="handleSelect(-1)">不太像我</button>
+                <button class="opt-btn" onclick="handleSelect(-2)">绝对不是，离谱</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="result-screen">
+        <p>经过严密计算，你的 DSB 人格为：</p>
+        <div class="type-tag" id="res-title"></div>
+        <div class="desc-box" id="res-desc"></div>
+        <button class="opt-btn" style="margin-top: 30px; width: 100%; text-align: center;" onclick="location.reload()">重新测评</button>
+    </div>
+</div>
+
+<script>
+    const bank = [
+        "你常在深夜通过刷短视频来缓解‘今天什么都没做’的负罪感。",
+        "如果在一个全是陌生人的聚会上，你更愿意去逗猫/狗而不是和人说话。",
+        "你买过昂贵的健身卡或学习课程，但由于‘心理上已经努力过了’而从未去过。",
+        "面对不熟的人发来的语音消息，你会感到莫名的烦躁或压力。",
+        "你曾幻想过如果突然获得超能力，第一件事是用来改善生活还是毁灭世界。",
+        "你觉得比起真实的旅行，看别人的旅行 VLOG 反而让你更轻松。",
+        "洗澡时，你经常会进行一些获颁诺贝尔奖或奥斯卡奖的获奖感言练习。",
+        "你会为了凑够外卖起送价，而多花 15 分钟挑选一件你并不想吃的单品。",
+        "你觉得‘早起’是对灵魂的一种不人道折磨。",
+        "当你在路上远远看到熟人，你会立刻低下头或假装看手机以避免打招呼。",
+        "你觉得自己的内心住着一个极其成熟的智者，但表现出来的像个智障。",
+        "对于‘明天要早起’这件事，你的应对策略是比平时熬得更晚。",
+        "你会因为一张表情包的语境不合适，而纠结是否要发给对方。",
+        "你曾怀疑过自己其实是某本小说里的配角，或者被外星人监视着。",
+        "你有一项坚持很久的爱好，但除了你自己，没有人知道你在搞这个。",
+        "比起解决问题，你更擅长在脑内复盘如果问题解决了会有多爽。",
+        "你认为‘不回消息’其实也是一种礼貌且明确的回复。",
+        "当你看到有人在社交媒体上大秀恩爱，你的第一反应是‘散得快’。",
+        "你觉得如果你去参加那种生存类真人秀，你绝对活不过第二集。",
+        "在超市排队时，你总觉得另一队比你这队动得快，哪怕两边一样长。",
+        "你偶尔会对着镜子里的自己做一个极其猥琐或夸张的表情。",
+        "你买东西时会因为店员太热情而感到害怕，甚至因此放弃购买。",
+        "如果现在世界静止一小时且只有你能动，你会去银行还是去睡觉？",
+        "你觉得人类这种生物，本质上都是在互相‘装作很正常’地活着。",
+        "你对自己未来的规划通常仅限于‘等到周末再说’。",
+        "你会因为在公共场合放了一个只有自己听见的屁而尴尬半小时。",
+        "你认为‘极简主义’的最好借口是因为自己懒得收拾房间。",
+        "你曾经为了拒绝一个邀约，编造了一个连你自己都快相信了的借口。",
+        "你觉得那些充满正能量、每天打鸡血的人，可能是某种仿生机器人。",
+        "在做完这个测试后，你其实并不在乎结果，你只是想看看我怎么编。"
+    ];
+
+    let current = 0;
+    let score = 0;
+
+    function initQuiz() {
+        document.getElementById('welcome-screen').style.display = 'none';
+        document.getElementById('quiz-screen').style.display = 'block';
+        updateQ();
+    }
+
+    function updateQ() {
+        document.getElementById('q-text').innerText = bank[current];
+        document.getElementById('q-counter').innerText = `QUESTION ${current + 1}/30`;
+        document.getElementById('inner-bar').style.width = `${((current + 1) / 30) * 100}%`;
+    }
+
+    function handleSelect(val) {
+        score += val;
+        current++;
+        if (current < 30) {
+            updateQ();
+        } else {
+            showResult();
+        }
+    }
+
+    function showResult() {
+        document.getElementById('quiz-screen').style.display = 'none';
+        const res = document.getElementById('result-screen');
+        const title = document.getElementById('res-title');
+        const desc = document.getElementById('res-desc');
+        res.style.display = 'block';
+
+        if (score >= 40) {
+            title.innerText = "🌌 赛博迷失哲学家";
+            desc.innerText = "你拥有极高的自我觉察和近乎疯狂的脑洞。你经常在清醒和中二之间无缝切换，是一个被现代文明耽误的星际流浪汉。你的 DSB 能量极高，建议保持目前的怪癖。";
+        } else if (score >= 15) {
+            title.innerText = "🥤 碳酸饮料守护者";
+            desc.innerText = "你是典型的‘间歇性踌躇满志，持续性混吃等死’。你聪明但拒绝卷，善良但有底线。你的人格非常有亲和力，只要不让你干活，你就是世界上最好相处的人。";
+        } else if (score >= -10) {
+            title.innerText = "🗿 现实主义避风港";
+            res.innerText = "半自动木头人"; // 微调
+            desc.innerText = "你相当稳健，甚至稳健得有点枯燥。你对这个世界的荒诞有一定的免疫力，因为你很清楚：只要我足够宅，尴尬就追不上我。";
+        } else {
+            title.innerText = "🌵 荒原清醒野兽";
+            desc.innerText = "你的人格极其纯粹。你不屑于参与人类的装模作样。你可能觉得自己很怪，但实际上，你是这个崩坏世界里少数还坚持‘真我’（或者说‘真懒’）的勇士。";
+        }
+    }
+</script>
+</body>
+</html>
